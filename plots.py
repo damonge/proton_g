@@ -123,7 +123,7 @@ if plot_cl_el:
     plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
     plt.xlabel(r'$\ell$', fontsize=15)
     plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_el_cc.pdf", bbox_inches='tight')
+    plt.savefig("figures/cl_el_gc.pdf", bbox_inches='tight')
 
 if plot_sn:
     def get_sn(d, c, reverse=False):
