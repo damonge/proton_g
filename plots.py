@@ -18,6 +18,7 @@ plot_nz = True
 plot_cl_nl = True
 plot_cl_el = True
 plot_sn = True
+plot_sn_opt_x = True
 ls_all = np.arange(2, 1000)
 
 cosmo=ccl.Cosmology(Omega_b=0.05,
@@ -136,7 +137,7 @@ if plot_sn:
         else:
             sn = np.sqrt(np.cumsum(sn_l))
         return sn
-    
+
     plt.figure(1001)
     plt.figure(1002)
     for u, c in zip(us, cols):
@@ -202,4 +203,73 @@ if plot_sn:
     plt.ylabel(r'$\left(\frac{S}{N}\right)_{\ell \geq \ell_{\rm min}}$', fontsize=15)
     plt.legend(loc='upper right', fontsize=13, labelspacing=0.1, ncol=2)
     plt.savefig("figures/sn_lmin_v2.pdf", bbox_inches='tight')
+
+if plot_sn_opt_x:
+    def get_sn(d, c, reverse=False):
+        cc = np.transpose(c, axes=[2,0,1])  # [Nl, Nt, Nt]
+        dd = d.T  # [Nl, Nt]
+        idd = np.linalg.solve(cc, dd) # [Nl, Nt]
+        sn_l = np.sum(dd * idd, axis=1) # [Nl]
+        if reverse:
+            sn = np.sqrt(np.cumsum(sn_l[::-1]))[::-1]
+        else:
+            sn = np.sqrt(np.cumsum(sn_l))
+        return sn
+
+    plt.figure(3001)
+    plt.figure(3002)
+    gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
+    for u, gg, c in zip(us, gs, cols):
+        bl = u.get_beam(ls_all)
+        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
+        sl_gc1 = get_cl(ls_all, cosmo, u, 1.5, g, 1.5) * bl
+        sl_gg1 = get_cl(ls_all, cosmo, g, 1.5)
+        sl_gc2 = get_cl(ls_all, cosmo, u, 1.5, gg, 1.5) * bl
+        sl_gg2 = get_cl(ls_all, cosmo, gg, 1.5)
+        nl_cc = u.get_nl()
+        nl_gg1 = g.get_nl()
+        nl_gg2 = gg.get_nl()
+        cl_cc = sl_cc + nl_cc
+        cl_gc1 = sl_gc1
+        cl_gc2 = sl_gc2
+        cl_gg1 = sl_gg1 + nl_gg1
+        cl_gg2 = sl_gg2 + nl_gg2
+        dcl_X1 = np.array([sl_gc1])
+        dcl_X2 = np.array([sl_gc2])
+        cov_X1 = np.array([[(cl_cc * cl_gg1 + cl_gc1**2) / (2*ls_all + 1)]])
+        cov_X2 = np.array([[(cl_cc * cl_gg2 + cl_gc2**2) / (2*ls_all + 1)]])
+        sn_X_lmax1 = get_sn(dcl_X1, cov_X1, reverse=False)
+        sn_X_lmin1 = get_sn(dcl_X1, cov_X1, reverse=True)
+        sn_X_lmax2 = get_sn(dcl_X2, cov_X2, reverse=False)
+        sn_X_lmin2 = get_sn(dcl_X2, cov_X2, reverse=True)
+
+        plt.figure(3001)
+        plt.plot(ls_all, sn_X_lmax1, '-', color=c,
+                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
+        plt.plot(ls_all, sn_X_lmax2, '--', color=c)
+        plt.figure(3002)
+        plt.plot(ls_all, sn_X_lmin1, '-', color=c,
+                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
+        plt.plot(ls_all, sn_X_lmin2, '--', color=c)
+
+    for i in [3001, 3002]:
+        plt.figure(i)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.ylim([0.5, 100])
+        plt.xlim([np.amin(ls_all), np.amax(ls_all)])
+        plt.plot([-1,-1],[-1,-1],'k-', label=r'${\rm Standard\,\,weights.}$')
+        plt.plot([-1,-1],[-1,-1],'k--', label=r'${\rm Optimal\,\,weights.}$')
+        plt.plot(ls_all, 3.*np.ones_like(ls_all), 'k--', lw=1)
+        plt.gca().tick_params(labelsize="large")
+    plt.figure(3001)
+    plt.xlabel(r'$\ell_{\rm max}$', fontsize=15)
+    plt.ylabel(r'$\left(\frac{S}{N}\right)^{g\,{\rm CR}}_{\ell \leq \ell_{\rm max}}$', fontsize=15)
+    plt.legend(loc='upper left', fontsize=13, labelspacing=0.1, ncol=2)
+    plt.savefig("figures/sn_lmax_opt_x.pdf", bbox_inches='tight')
+    plt.figure(3002)
+    plt.xlabel(r'$\ell_{\rm min}$', fontsize=15)
+    plt.ylabel(r'$\left(\frac{S}{N}\right)^{g\,{\rm CR}}_{\ell \geq \ell_{\rm min}}$', fontsize=15)
+    plt.legend(loc='upper right', fontsize=13, labelspacing=0.1, ncol=2)
+    plt.savefig("figures/sn_lmin_opt_x.pdf", bbox_inches='tight')
 plt.show()

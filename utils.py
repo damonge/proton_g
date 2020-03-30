@@ -56,17 +56,41 @@ class UHECRs(DiscreteTracer):
 
 class Gals(DiscreteTracer):
     def __init__(self, nz_arr, n_gals,
-                 z_max=0.15, nz=1024):
+                 z_max=0.15, nz=1024, t_other=None, cosmo=None):
         if nz_arr=='2MRS':
             self.nz_f = self._nz_2mrs
         else:
             self.nz_f = interp1d(nz_arr[0], nz_arr[1],
                                  bounds_error=False, fill_value=0)
+        self.z_f = z_max
+        self.nz = nz
+
         self.n_obj = n_gals
         self.sigma_beam = 0
 
+        z_arr = np.linspace(0, z_max, nz)
+        self.nz_cl = self.nz_f
+        if t_other is not None:
+            nz_mine = self.get_nz(z_arr, cosmo)
+            nz_othr = t_other.get_nz(z_arr, cosmo)
+            nzmax = np.amax(nz_mine)
+            z_good = nz_mine > 1E-3 * nzmax
+            wz = np.zeros(nz)
+            wz[z_good] = nz_othr[z_good] / nz_mine[z_good]
+            fill = 0
+            self.nz_cl = interp1d(z_arr, nz_mine * wz,
+                                  bounds_error=False, fill_value=0)
+        else:
+            wz = np.ones(nz)
+            fill = 1
+        self.wz_f = interp1d(z_arr, wz, bounds_error=False,
+                             fill_value=fill)
+
     def get_nz(self, z, cosmo):
-        return self.nz_f(z)
+        return self.nz_cl(z)
+
+    def get_wz(self, z, cosmo):
+        return self.wz_f(z)
 
     def _nz_2mrs(self, z):
         # From 1706.05422
@@ -74,6 +98,45 @@ class Gals(DiscreteTracer):
         beta = 1.64
         x = z / 0.0266
         return x**m * np.exp(-x**beta)
+
+    def get_nl(self, n_ells=None, integ_quad=False):
+        from scipy.integrate import quad, simps
+        def integ_0(z):
+            return self.nz_f(z)
+
+        def integ_1(z):
+            return self.wz_f(z) * self.nz_f(z)
+
+        def integ_2(z):
+            return self.wz_f(z)**2 * self.nz_f(z)
+
+        def integrator_quad(fz):
+            return quad(fz, 0., self.z_f, limit=1000)[0]
+
+        def integrator_simps(fz):
+            return np.sum(fz(z_arr)) * np.mean(np.diff(z_arr))
+            print(fz(z_arr))
+            return simps(z_arr, fz(z_arr))
+
+        def integrator(fz):
+            if integ_quad:
+                return integrator_quad(fz)
+            else:
+                return integrator_simps(fz)
+
+        if not integ_quad:
+            z_arr = np.linspace(0., self.z_f, self.nz)
+
+        i0 = integrator(integ_0)
+        i1 = integrator(integ_1) / i0
+        i2 = integrator(integ_2) / i0
+        ndens = self.n_obj / (4*np.pi)
+        nl_val = i2 / (i1**2 * ndens)
+        if n_ells is not None:
+            return nl_val * np.ones(n_ells)
+        else:
+            return nl_val
+
 
 def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None):
     if ell_pivots is None:
