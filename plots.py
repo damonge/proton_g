@@ -14,11 +14,12 @@ us.append(UHECRs(59, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 200, 1.))
 us.append(UHECRs(39, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 1000, 1.))
 g = Gals("2MRS", 1E5)
 
-plot_nz = True
-plot_cl_nl = True
+plot_nz = False
+plot_cl_nl = False
 plot_cl_el = True
-plot_sn = True
-plot_sn_opt_x = True
+plot_cl_el_opt = True
+plot_sn = False
+plot_sn_opt_x = False
 ls_all = np.arange(2, 1000)
 
 cosmo=ccl.Cosmology(Omega_b=0.05,
@@ -125,6 +126,33 @@ if plot_cl_el:
     plt.xlabel(r'$\ell$', fontsize=15)
     plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
     plt.savefig("figures/cl_el_gc.pdf", bbox_inches='tight')
+
+if plot_cl_el_opt:
+    gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
+    plt.figure()
+    for u, gg, c in zip(us, gs, cols):
+        bl = u.get_beam(ls_all)
+        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
+        sl_gc = get_cl(ls_all, cosmo, u, 1.5, gg, 1.5) * bl
+        sl_gg = get_cl(ls_all, cosmo, gg, 1.5)
+        nl_cc = u.get_nl()
+        nl_gg = gg.get_nl()
+        cl_cc = sl_cc + nl_cc
+        cl_gg = sl_gg + nl_gg
+        cl_gc = sl_gc
+        el_gc = np.sqrt((cl_cc * cl_gg + cl_gc**2) / (2*ls_all + 1))
+        plt.fill_between(ls_all, sl_gc - el_gc, sl_gc+el_gc,
+                         alpha=0.5, color=c,
+                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
+        plt.plot(ls_all, sl_gc, '-', color=c) 
+    plt.ylim([5E-6, 4])
+    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
+    plt.loglog()
+    plt.gca().tick_params(labelsize="large")
+    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
+    plt.xlabel(r'$\ell$', fontsize=15)
+    plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
+    plt.savefig("figures/cl_el_gc_opt.pdf", bbox_inches='tight')
 
 if plot_sn:
     def get_sn(d, c, reverse=False):
