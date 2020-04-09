@@ -1,7 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pyccl as ccl
+from HOD import HaloProfileHOD, Profile2ptHOD
 from scipy.interpolate import interp1d
+
 
 class DiscreteTracer(object):
     def __init__(self, n_obj):
@@ -50,14 +51,15 @@ class UHECRs(DiscreteTracer):
         Ecut = (Ecut*1E-18).astype(int)
         Ecut_list = np.unique(Ecut)
         if E_cut not in Ecut_list:
-            raise ValueError("Input E_cut = %d EeV not in attenuation file" % E_cut)
+            raise ValueError("Input E_cut = %d EeV not in file" % E_cut)
         msk = Ecut == E_cut
         return interp1d(z[msk], att[msk], bounds_error=False, fill_value=0)
+
 
 class Gals(DiscreteTracer):
     def __init__(self, nz_arr, n_gals,
                  z_max=0.15, nz=1024, t_other=None, cosmo=None):
-        if nz_arr=='2MRS':
+        if nz_arr == '2MRS':
             self.nz_f = self._nz_2mrs
         else:
             self.nz_f = interp1d(nz_arr[0], nz_arr[1],
@@ -101,6 +103,7 @@ class Gals(DiscreteTracer):
 
     def get_nl(self, n_ells=None, integ_quad=False):
         from scipy.integrate import quad, simps
+
         def integ_0(z):
             return self.nz_f(z)
 
@@ -138,7 +141,8 @@ class Gals(DiscreteTracer):
             return nl_val
 
 
-def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None):
+def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None, use_hm=False,
+           get_1h=True, get_2h=True):
     if ell_pivots is None:
         lmx = np.amax(ell)+1
         ell_pivots = np.unique(np.geomspace(2, lmx,
@@ -146,12 +150,33 @@ def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None):
     if b2 is None:
         b2 = b1
 
-    ct1 = t1.get_tracer(cosmo, b1)
+    if use_hm:
+        b1_use = 1
+        b2_use = 1
+        hmd = ccl.halos.MassDef200c(c_m='Prada12')
+        cM = ccl.halos.ConcentrationPrada12(hmd)
+        nM = ccl.halos.MassFuncTinker08(cosmo, mass_def=hmd)
+        bM = ccl.halos.HaloBiasTinker10(cosmo, mass_def=hmd)
+        prof = HaloProfileHOD(cM)
+        p2pt = Profile2ptHOD()
+        hmc = ccl.halos.HMCalculator(cosmo, nM, bM, hmd)
+        k_arr = np.geomspace(1E-4, 1E4, 512)
+        a_arr = np.linspace(0.8, 1, 32)
+        pk = ccl.halos.halomod_Pk2D(cosmo, hmc, prof, prof_2pt=p2pt,
+                                    normprof1=True, get_1h=get_1h,
+                                    get_2h=get_2h, lk_arr=np.log(k_arr),
+                                    a_arr=a_arr)
+    else:
+        pk = None
+        b1_use = b1
+        b2_use = b2
+
+    ct1 = t1.get_tracer(cosmo, b1_use)
     if t2 is None:
         ct2 = ct1
     else:
-        ct2 = t2.get_tracer(cosmo, b2)
-        
-    cl = ccl.angular_cl(cosmo, ct1, ct2, ell_pivots)
-    cli = interp1d(np.log(ell_pivots), np.log(cl))
-    return np.exp(cli(np.log(ell)))
+        ct2 = t2.get_tracer(cosmo, b2_use)
+
+    cl = ccl.angular_cl(cosmo, ct1, ct2, ell_pivots, p_of_k_a=pk)
+    cli = interp1d(np.log(ell_pivots), ell_pivots * cl)
+    return cli(np.log(ell))/ell
