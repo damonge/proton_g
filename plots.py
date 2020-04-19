@@ -10,17 +10,15 @@ rc('text', usetex=True)
 cols = ['#0000AA', '#AAAA00', '#AA0000']
 us = []
 us.append(UHECRs(100, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 30, 1.))
-us.append(UHECRs(59, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 200, 1.))
+us.append(UHECRs(63, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 200, 1.))
 us.append(UHECRs(39, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 1000, 1.))
-g = Gals("2MRS", 1E5)
+gg = Gals("2MRS", 1E5)
 
-plot_nz = False
-plot_hm = True
-plot_cl_nl = False
-plot_cl_el = False
-plot_cl_el_opt = False
-plot_sn = False
-plot_sn_opt_x = False
+save_cls = True
+plot_fig1 = False
+plot_fig2 = False
+plot_fig3 = False
+plot_fig4 = False
 ls_all = np.arange(2, 1000)
 
 cosmo = ccl.Cosmology(Omega_b=0.05,
@@ -30,44 +28,29 @@ cosmo = ccl.Cosmology(Omega_b=0.05,
                       n_s=0.96,
                       Omega_k=0)
 
-if plot_hm:
-    def plot_cls(t1, t2, title, fname=None):
-        clb1 = get_cl(ls_all, cosmo, t1, 1., t2=t2, b2=1.)
-        clb2 = get_cl(ls_all, cosmo, t1, 2., t2=t2, b2=2.)
-        cl1h = get_cl(ls_all, cosmo, t1, 1., t2=t2, b2=1.,
-                      use_hm=True, get_1h=True, get_2h=False)
-        cl2h = get_cl(ls_all, cosmo, t1, 1., t2=t2, b2=1.,
-                      use_hm=True, get_1h=False, get_2h=True)
-        plt.figure()
-        plt.title(title, fontsize=15)
-        plt.fill_between(ls_all, clb1, clb2, alpha=0.5,
-                         label=r'${\rm Linear\,\,bias},\,\,b\in[1, 2]$')
-        plt.plot(ls_all, cl1h, 'k:', label=r'$1\,{\rm halo}$')
-        plt.plot(ls_all, cl2h, 'k--', label=r'$2\,{\rm halo}$')
-        plt.plot(ls_all, cl1h+cl2h, 'k-', label=r'$1+2\,{\rm halo}$')
-        plt.xlim([2, 1000])
-        plt.xlabel(r'$\ell$', fontsize=15)
-        plt.ylabel(r'$C_\ell$', fontsize=15)
-        plt.legend(loc='lower left', ncol=2, fontsize=13)
-        plt.loglog()
-        plt.gca().tick_params(labelsize="large")
-        if fname:
-            plt.savefig(fname, bbox_inches='tight')
-    plot_cls(g, g, r'$\Delta_g\times \Delta_g$',
-             'figures/clgg.pdf')
+if save_cls:
     for u in us:
-        plot_cls(g, u,
-                 '$\\Delta_g\\times \\Delta_{\\rm CR}, ' +
-                 'E_{\\rm cut} = %d EeV$' % u.E_cut,
-                 'figures/clgu%d.pdf' % u.E_cut)
-        plot_cls(u, u, '$\\Delta_{\\rm CR}\\times \\Delta_{\\rm CR}, ' +
-                 'E_{\\rm cut} = %d EeV$' % u.E_cut,
-                 'figures/cluu%d.pdf' % u.E_cut)
-
-if plot_nz:
+        print(u.E_cut)
+        cl1huu = get_cl(ls_all, cosmo, us[1], 1., t2=us[1], b2=1.,
+                        use_hm=True, get_1h=True, get_2h=False)
+        cl2huu = get_cl(ls_all, cosmo, us[1], 1., t2=us[1], b2=1.,
+                        use_hm=True, get_1h=False, get_2h=True)
+        cluu = cl1huu + cl2huu
+        cl1hgu = get_cl(ls_all, cosmo, gg, 1., t2=us[1], b2=1.,
+                        use_hm=True, get_1h=True, get_2h=False)
+        cl2hgu = get_cl(ls_all, cosmo, gg, 1., t2=us[1], b2=1.,
+                        use_hm=True, get_1h=False, get_2h=True)
+        clgu = cl1hgu + cl2hgu
+        np.savetxt("figures/cluu%d.txt" % (u.E_cut),
+                   np.transpose([ls_all, cluu, cl1huu, cl2huu]),
+                   header="[1]-ell [2]-1h+2h [3]-1h [4]-2h")
+        np.savetxt("figures/clgu%d.txt" % (u.E_cut),
+                   np.transpose([ls_all, clgu, cl1hgu, cl2hgu]),
+                   header="[1]-ell [2]-1h+2h [3]-1h [4]-2h")
+if plot_fig1:
     zz = np.linspace(0.000001, 0.15, 1024)
     plt.figure()
-    nz = g.get_nz(zz, cosmo)
+    nz = gg.get_nz(zz, cosmo)
     plt.plot(zz, nz/np.amax(nz), 'k-', label=r'$\phi_g,\,\,{\rm 2MRS}$')
     for u, c in zip(us, cols):
         nz = u.get_nz(zz, cosmo)
@@ -79,117 +62,90 @@ if plot_nz:
     plt.ylim([0, 1.1])
     plt.xlabel(r'$z$', fontsize=15)
     plt.ylabel(r'$\phi(z)\,\,({\rm normalized})$', fontsize=15)
-    plt.savefig("figures/phi_v2.pdf", bbox_inches='tight')
-
-if plot_cl_nl:
-    plt.figure()
+    plt.savefig("figures/phi.pdf", bbox_inches='tight')
+if plot_fig2:
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
+    plt.subplots_adjust(wspace=0)
+    
     for u, c in zip(us, cols):
-        plt.fill_between(ls_all,
-                         get_cl(ls_all, cosmo, u, 1.),
-                         get_cl(ls_all, cosmo, u, 2.),
-                         alpha=0.5, color=c,
-                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, u.get_nl(n_ells=len(ls_all)), '--', color=c)
-    plt.ylim([5E-6, 5])
-    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-    plt.loglog()
-    plt.gca().tick_params(labelsize="large")
-    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
-    plt.xlabel(r'$\ell$', fontsize=15)
-    plt.ylabel(r'${\cal S}^{\rm CR\,CR}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_nl_cc.pdf", bbox_inches='tight')
-
-    plt.figure()
-    for u, c in zip(us, cols):
-        plt.fill_between(ls_all,
-                         get_cl(ls_all, cosmo, u, 1., t2=g, b2=1.5),
-                         get_cl(ls_all, cosmo, u, 2., t2=g, b2=1.5),
-                         alpha=0.5, color=c,
-                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, u.get_nl(n_ells=len(ls_all)), '--', color=c)
-    plt.ylim([5E-6, 0.99])
-    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-    plt.loglog()
-    plt.gca().tick_params(labelsize="large")
-    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
-    plt.xlabel(r'$\ell$', fontsize=15)
-    plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_nl_gc.pdf", bbox_inches='tight')
-
-if plot_cl_el:
-    plt.figure()
-    for u, c in zip(us, cols):
-        bl = u.get_beam(ls_all)
-        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
-        nl_cc = u.get_nl()
-        cl_cc = sl_cc + nl_cc
-        el_cc = np.sqrt(2 * cl_cc**2 / (2*ls_all + 1))
-        plt.fill_between(ls_all, sl_cc - el_cc, sl_cc+el_cc,
-                         alpha=0.5, color=c,
-                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, sl_cc, '-', color=c)
-    plt.ylim([5E-6, 4])
-    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-    plt.loglog()
-    plt.gca().tick_params(labelsize="large")
-    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
-    plt.xlabel(r'$\ell$', fontsize=15)
-    plt.ylabel(r'${\cal S}^{\rm CR\,CR}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_el_cc.pdf", bbox_inches='tight')
-
-    plt.figure()
-    for u, c in zip(us, cols):
-        bl = u.get_beam(ls_all)
-        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
-        sl_gc = get_cl(ls_all, cosmo, u, 1.5, t2=g, b2=1.5) * bl
-        sl_gg = get_cl(ls_all, cosmo, g, 1.5)
-        nl_cc = u.get_nl()
-        nl_gg = g.get_nl()
-        cl_cc = sl_cc + nl_cc
-        cl_gg = sl_gg + nl_gg
-        cl_gc = sl_gc
-        el_gc = np.sqrt((cl_cc * cl_gg + cl_gc**2) / (2*ls_all + 1))
-        plt.fill_between(ls_all, sl_gc - el_gc, sl_gc+el_gc,
-                         alpha=0.5, color=c,
-                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, sl_gc, '-', color=c)
-    plt.ylim([5E-6, 0.4])
-    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-    plt.loglog()
-    plt.gca().tick_params(labelsize="large")
-    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
-    plt.xlabel(r'$\ell$', fontsize=15)
-    plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_el_gc.pdf", bbox_inches='tight')
-
-if plot_cl_el_opt:
+        cl_1h_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+                          use_hm=True, get_1h=True, get_2h=False)
+        cl_1h_gc = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+                          use_hm=True, get_1h=True, get_2h=False)
+        cl_2h_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+                          use_hm=True, get_1h=False, get_2h=True)
+        cl_2h_gc = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+                          use_hm=True, get_1h=False, get_2h=True)
+        cl_cc = cl_1h_cc + cl_2h_cc
+        cl_gc = cl_1h_gc + cl_2h_gc
+        ax[0].plot(ls_all, cl_cc, '-', c=c)
+        ax[0].plot(ls_all, cl_2h_cc, '--', c=c)
+        ax[0].plot(ls_all, cl_1h_cc, ':', c=c)
+        ax[1].plot(ls_all, cl_gc, '-', c=c)
+        ax[1].plot(ls_all, cl_2h_gc, '--', c=c)
+        ax[1].plot(ls_all, cl_1h_gc, ':', c=c)
+    for x in ax:
+        x.set_yscale('log')
+        x.set_xscale('log')
+        x.set_xlim([2, 1000])
+        x.set_ylim([7E-6, 5])
+        x.tick_params(labelsize="large")
+if plot_fig3:
+    fig, ax = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
+    plt.subplots_adjust(wspace=0)
+    
     gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
-    plt.figure()
-    for u, gg, c in zip(us, gs, cols):
+    for u, g, c in zip(us, gs, cols):
+        dl = 4
         bl = u.get_beam(ls_all)
-        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
-        sl_gc = get_cl(ls_all, cosmo, u, 1.5, t2=gg, b2=1.5) * bl
-        sl_gg = get_cl(ls_all, cosmo, gg, 1.5)
-        nl_cc = u.get_nl()
-        nl_gg = gg.get_nl()
+        tl_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gc = get_cl(ls_all, cosmo, g, 1., t2=u, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gg = get_cl(ls_all, cosmo, g, 1., t2=g, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gcb = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+                        use_hm=True, get_1h=True, get_2h=True)
+        tl_ggb = get_cl(ls_all, cosmo, gg, 1., t2=gg, b2=1.,
+                        use_hm=True, get_1h=True, get_2h=True)
+        sl_cc = tl_cc * bl**2
+        sl_gc = tl_gc * bl
+        sl_gg = tl_gg
+        sl_gcb = tl_gcb * bl
+        sl_ggb = tl_ggb
+        nl_cc = u.get_nl(n_ells=len(ls_all))
+        nl_gc = np.zeros(len(ls_all))
+        nl_gg = g.get_nl(n_ells=len(ls_all))
+        nl_gcb = np.zeros(len(ls_all))
+        nl_ggb = gg.get_nl(n_ells=len(ls_all))
         cl_cc = sl_cc + nl_cc
+        cl_gc = sl_gc + nl_gc
         cl_gg = sl_gg + nl_gg
-        cl_gc = sl_gc
-        el_gc = np.sqrt((cl_cc * cl_gg + cl_gc**2) / (2*ls_all + 1))
-        plt.fill_between(ls_all, sl_gc - el_gc, sl_gc+el_gc,
-                         alpha=0.5, color=c,
-                         label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, sl_gc, '-', color=c)
-    plt.ylim([5E-6, 4])
-    plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-    plt.loglog()
-    plt.gca().tick_params(labelsize="large")
-    plt.legend(loc='lower left', fontsize=13, labelspacing=0.1)
-    plt.xlabel(r'$\ell$', fontsize=15)
-    plt.ylabel(r'${\cal S}^{g,{\rm CR}}_\ell$', fontsize=15)
-    plt.savefig("figures/cl_el_gc_opt.pdf", bbox_inches='tight')
-
-if plot_sn:
+        cl_gcb = sl_gcb + nl_gcb
+        cl_ggb = sl_ggb + nl_ggb
+        err_prefac = 1/((2*ls_all+1)*dl)
+        el_cc = np.sqrt(2*cl_cc**2*err_prefac)
+        el_gc = np.sqrt((cl_cc*cl_gg + cl_gc**2)*err_prefac)
+        el_gcb = np.sqrt((cl_cc*cl_ggb + cl_gcb**2)*err_prefac)
+        ax[0].fill_between(ls_all, sl_cc-el_cc, sl_cc+el_cc,
+                           alpha=0.5, color=c)
+        ax[0].plot(ls_all, sl_cc, '-', c=c)
+        ax[0].plot(ls_all, tl_cc, '--', c=c)
+        ax[1].fill_between(ls_all, sl_gcb-el_gcb, sl_gcb+el_gcb,
+                           alpha=0.5, color=c)
+        ax[1].plot(ls_all, sl_gcb, '-', c=c)
+        ax[1].plot(ls_all, tl_gcb, '--', c=c)
+        ax[2].fill_between(ls_all, sl_gc-el_gc, sl_gc+el_gc,
+                           alpha=0.5, color=c)
+        ax[2].plot(ls_all, sl_gc, '-', c=c)
+        ax[2].plot(ls_all, tl_gc, '--', c=c)
+    for x in ax:
+        x.set_yscale('log')
+        x.set_xscale('log')
+        x.set_xlim([2, 1000])
+        x.set_ylim([7E-6, 5])
+        x.tick_params(labelsize="large")
+if plot_fig4:
     def get_sn(d, c, reverse=False):
         cc = np.transpose(c, axes=[2, 0, 1])  # [Nl, Nt, Nt]
         dd = d.T  # [Nl, Nt]
@@ -201,144 +157,89 @@ if plot_sn:
             sn = np.sqrt(np.cumsum(sn_l))
         return sn
 
-    plt.figure(1001)
-    plt.figure(1002)
-    for u, c in zip(us, cols):
-        bl = u.get_beam(ls_all)
-        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
-        sl_gc = get_cl(ls_all, cosmo, u, 1.5, t2=g, b2=1.5) * bl
-        sl_gg = get_cl(ls_all, cosmo, g, 1.5)
-        nl_cc = u.get_nl()
-        nl_gg = g.get_nl()
-        cl_cc = sl_cc + nl_cc
-        cl_gc = sl_gc
-        cl_gg = sl_gg + nl_gg
-        dcl_A = np.array([2 * sl_cc])
-        cov_A = np.array([[2 * cl_cc**2 / (2*ls_all + 1)]])
-        dcl_X = np.array([sl_gc])
-        cov_X = np.array([[(cl_cc * cl_gg + cl_gc**2) / (2*ls_all + 1)]])
-        dcl_T = np.array([2 * sl_cc, sl_gc, 0 * sl_gg])
-        cov_T = np.array([[2*cl_cc**2 / (2*ls_all + 1),
-                           2*cl_cc*cl_gc / (2*ls_all + 1),
-                           2*cl_gc**2 / (2*ls_all + 1)],
-                          [2*cl_cc*cl_gc / (2*ls_all + 1),
-                           (cl_cc * cl_gg + cl_gc**2) / (2*ls_all + 1),
-                           2*cl_gg*cl_gc / (2*ls_all + 1)],
-                          [2*cl_gc**2/(2*ls_all + 1),
-                           2*cl_gg*cl_gc / (2*ls_all + 1),
-                           2*cl_gg**2 / (2*ls_all + 1)]])
-        sn_A_lmax = get_sn(dcl_A, cov_A, reverse=False)
-        sn_A_lmin = get_sn(dcl_A, cov_A, reverse=True)
-        sn_X_lmax = get_sn(dcl_X, cov_X, reverse=False)
-        sn_X_lmin = get_sn(dcl_X, cov_X, reverse=True)
-        sn_T_lmax = get_sn(dcl_T, cov_T, reverse=False)
-        sn_T_lmin = get_sn(dcl_T, cov_T, reverse=True)
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10), sharey=True, sharex=True)
+    plt.subplots_adjust(wspace=0,hspace=0)
+    for x in ax.flatten():
+        x.set_xscale('log')
+        x.set_xlim([2, 1000])
+        x.set_ylim([0, 35])
+        x.tick_params(labelsize="large")
 
-        plt.figure(1001)
-        plt.plot(ls_all, sn_A_lmax, '-.', color=c)
-        plt.plot(ls_all, sn_X_lmax, '--', color=c)
-        plt.plot(ls_all, sn_T_lmax, '-', color=c,
-                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.figure(1002)
-        plt.plot(ls_all, sn_A_lmin, '-.', color=c)
-        plt.plot(ls_all, sn_X_lmin, '--', color=c)
-        plt.plot(ls_all, sn_T_lmin, '-', color=c,
-                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-
-    for i in [1001, 1002]:
-        plt.figure(i)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.ylim([0.5, 100])
-        plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-        plt.plot([-1, -1], [-1, -1], 'k-.', label=r'${\rm Auto-only}$')
-        plt.plot([-1, -1], [-1, -1], 'k--', label=r'${\rm Cross-only}$')
-        plt.plot([-1, -1], [-1, -1], 'k-', label=r'${\rm Auto + cross}$')
-        plt.plot(ls_all, 3.*np.ones_like(ls_all), 'k--', lw=1)
-        plt.gca().tick_params(labelsize="large")
-    plt.figure(1001)
-    plt.xlabel(r'$\ell_{\rm max}$', fontsize=15)
-    plt.ylabel(r'$\left(\frac{S}{N}\right)_{\ell \leq \ell_{\rm max}}$',
-               fontsize=15)
-    plt.legend(loc='upper left', fontsize=13, labelspacing=0.1, ncol=2)
-    plt.savefig("figures/sn_lmax_v2.pdf", bbox_inches='tight')
-    plt.figure(1002)
-    plt.xlabel(r'$\ell_{\rm min}$', fontsize=15)
-    plt.ylabel(r'$\left(\frac{S}{N}\right)_{\ell \geq \ell_{\rm min}}$',
-               fontsize=15)
-    plt.legend(loc='upper right', fontsize=13, labelspacing=0.1, ncol=2)
-    plt.savefig("figures/sn_lmin_v2.pdf", bbox_inches='tight')
-
-if plot_sn_opt_x:
-    def get_sn(d, c, reverse=False):
-        cc = np.transpose(c, axes=[2, 0, 1])  # [Nl, Nt, Nt]
-        dd = d.T  # [Nl, Nt]
-        idd = np.linalg.solve(cc, dd)  # [Nl, Nt]
-        sn_l = np.sum(dd * idd, axis=1)  # [Nl]
-        if reverse:
-            sn = np.sqrt(np.cumsum(sn_l[::-1]))[::-1]
-        else:
-            sn = np.sqrt(np.cumsum(sn_l))
-        return sn
-
-    plt.figure(3001)
-    plt.figure(3002)
     gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
-    for u, gg, c in zip(us, gs, cols):
+    for u, g, c in zip(us, gs, cols):
         bl = u.get_beam(ls_all)
-        sl_cc = get_cl(ls_all, cosmo, u, 1.5) * bl**2
-        sl_gc1 = get_cl(ls_all, cosmo, u, 1.5, t2=g, b2=1.5) * bl
-        sl_gg1 = get_cl(ls_all, cosmo, g, 1.5)
-        sl_gc2 = get_cl(ls_all, cosmo, u, 1.5, t2=gg, b2=1.5) * bl
-        sl_gg2 = get_cl(ls_all, cosmo, gg, 1.5)
-        nl_cc = u.get_nl()
-        nl_gg1 = g.get_nl()
-        nl_gg2 = gg.get_nl()
+        tl_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gc = get_cl(ls_all, cosmo, g, 1., t2=u, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gg = get_cl(ls_all, cosmo, g, 1., t2=g, b2=1.,
+                       use_hm=True, get_1h=True, get_2h=True)
+        tl_gcb = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+                        use_hm=True, get_1h=True, get_2h=True)
+        tl_ggb = get_cl(ls_all, cosmo, gg, 1., t2=gg, b2=1.,
+                        use_hm=True, get_1h=True, get_2h=True)
+        sl_cc = tl_cc * bl**2
+        sl_gc = tl_gc * bl
+        sl_gg = tl_gg
+        sl_gcb = tl_gcb * bl
+        sl_ggb = tl_ggb
+        nl_cc = u.get_nl(n_ells=len(ls_all))
+        nl_gc = np.zeros(len(ls_all))
+        nl_gg = g.get_nl(n_ells=len(ls_all))
+        nl_gcb = np.zeros(len(ls_all))
+        nl_ggb = gg.get_nl(n_ells=len(ls_all))
         cl_cc = sl_cc + nl_cc
-        cl_gc1 = sl_gc1
-        cl_gc2 = sl_gc2
-        cl_gg1 = sl_gg1 + nl_gg1
-        cl_gg2 = sl_gg2 + nl_gg2
-        dcl_X1 = np.array([sl_gc1])
-        dcl_X2 = np.array([sl_gc2])
-        cov_X1 = np.array([[(cl_cc * cl_gg1 + cl_gc1**2) / (2*ls_all + 1)]])
-        cov_X2 = np.array([[(cl_cc * cl_gg2 + cl_gc2**2) / (2*ls_all + 1)]])
-        sn_X_lmax1 = get_sn(dcl_X1, cov_X1, reverse=False)
-        sn_X_lmin1 = get_sn(dcl_X1, cov_X1, reverse=True)
-        sn_X_lmax2 = get_sn(dcl_X2, cov_X2, reverse=False)
-        sn_X_lmin2 = get_sn(dcl_X2, cov_X2, reverse=True)
-
-        plt.figure(3001)
-        plt.plot(ls_all, sn_X_lmax1, '-', color=c,
-                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, sn_X_lmax2, '--', color=c)
-        plt.figure(3002)
-        plt.plot(ls_all, sn_X_lmin1, '-', color=c,
-                 label=r'$E_{\rm cut}=%d\,{\rm EeV}$' % u.E_cut)
-        plt.plot(ls_all, sn_X_lmin2, '--', color=c)
-
-    for i in [3001, 3002]:
-        plt.figure(i)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.ylim([0.5, 100])
-        plt.xlim([np.amin(ls_all), np.amax(ls_all)])
-        plt.plot([-1, -1], [-1, -1], 'k-',
-                 label=r'${\rm Standard\,\,weights.}$')
-        plt.plot([-1, -1], [-1, -1], 'k--',
-                 label=r'${\rm Optimal\,\,weights.}$')
-        plt.plot(ls_all, 3.*np.ones_like(ls_all), 'k--', lw=1)
-        plt.gca().tick_params(labelsize="large")
-    plt.figure(3001)
-    plt.xlabel(r'$\ell_{\rm max}$', fontsize=15)
-    plt.ylabel(r'$\left(\frac{S}{N}\right)^{g\,{\rm CR}}_{\ell \leq \ell_{\rm max}}$',
-               fontsize=15)
-    plt.legend(loc='upper left', fontsize=13, labelspacing=0.1, ncol=2)
-    plt.savefig("figures/sn_lmax_opt_x.pdf", bbox_inches='tight')
-    plt.figure(3002)
-    plt.xlabel(r'$\ell_{\rm min}$', fontsize=15)
-    plt.ylabel(r'$\left(\frac{S}{N}\right)^{g\,{\rm CR}}_{\ell \geq \ell_{\rm min}}$',
-               fontsize=15)
-    plt.legend(loc='upper right', fontsize=13, labelspacing=0.1, ncol=2)
-    plt.savefig("figures/sn_lmin_opt_x.pdf", bbox_inches='tight')
+        cl_gc = sl_gc + nl_gc
+        cl_gg = sl_gg + nl_gg
+        cl_gcb = sl_gcb + nl_gcb
+        cl_ggb = sl_ggb + nl_ggb
+        err_prefac = 1/((2*ls_all+1))
+        dl_A = np.array([2 * sl_cc])
+        cov_A = np.array([[2*cl_cc**2*err_prefac]])
+        dl_X = np.array([sl_gc])
+        cov_X = np.array([[(cl_cc*cl_gg + cl_gc**2)*err_prefac]])
+        dl_Xb = np.array([sl_gcb])
+        cov_Xb = np.array([[(cl_cc*cl_ggb + cl_gcb**2)*err_prefac]])
+        dl_T = np.array([2*sl_cc, sl_gc, 0*sl_gg])
+        cov_T = np.array([[2*cl_cc**2*err_prefac,
+                           2*cl_cc*cl_gc*err_prefac,
+                           2*cl_gc**2*err_prefac],
+                          [2*cl_cc*cl_gc*err_prefac,
+                           (cl_cc*cl_gg+cl_gc**2)*err_prefac,
+                           2*cl_gg*cl_gc*err_prefac],
+                          [2*cl_gc**2*err_prefac,
+                           2*cl_gg*cl_gc*err_prefac,
+                           2*cl_gg**2*err_prefac]])
+        dl_Tb = np.array([2*sl_cc, sl_gcb, 0*sl_ggb])
+        cov_Tb = np.array([[2*cl_cc**2*err_prefac,
+                           2*cl_cc*cl_gcb*err_prefac,
+                           2*cl_gcb**2*err_prefac],
+                          [2*cl_cc*cl_gcb*err_prefac,
+                           (cl_cc*cl_ggb+cl_gcb**2)*err_prefac,
+                           2*cl_ggb*cl_gcb*err_prefac],
+                          [2*cl_gcb**2*err_prefac,
+                           2*cl_ggb*cl_gcb*err_prefac,
+                           2*cl_ggb**2*err_prefac]])
+        sn_A_lmax = get_sn(dl_A, cov_A, reverse=False)
+        sn_A_lmin = get_sn(dl_A, cov_A, reverse=True)
+        sn_X_lmax = get_sn(dl_X, cov_X, reverse=False)
+        sn_X_lmin = get_sn(dl_X, cov_X, reverse=True)
+        sn_T_lmax = get_sn(dl_T, cov_T, reverse=False)
+        sn_T_lmin = get_sn(dl_T, cov_T, reverse=True)
+        sn_Xb_lmax = get_sn(dl_Xb, cov_Xb, reverse=False)
+        sn_Xb_lmin = get_sn(dl_Xb, cov_Xb, reverse=True)
+        sn_Tb_lmax = get_sn(dl_Tb, cov_Tb, reverse=False)
+        sn_Tb_lmin = get_sn(dl_Tb, cov_Tb, reverse=True)
+        ax[1][0].plot(ls_all, sn_A_lmax, '-.', color=c)
+        ax[1][0].plot(ls_all, sn_X_lmax, '--', color=c)
+        ax[1][0].plot(ls_all, sn_T_lmax, '-', color=c)
+        ax[1][1].plot(ls_all, sn_A_lmin, '-.', color=c)
+        ax[1][1].plot(ls_all, sn_X_lmin, '--', color=c)
+        ax[1][1].plot(ls_all, sn_T_lmin, '-', color=c)
+        ax[0][0].plot(ls_all, sn_A_lmax, '-.', color=c)
+        ax[0][0].plot(ls_all, sn_Xb_lmax, '--', color=c)
+        ax[0][0].plot(ls_all, sn_Tb_lmax, '-', color=c)
+        ax[0][1].plot(ls_all, sn_A_lmin, '-.', color=c)
+        ax[0][1].plot(ls_all, sn_Xb_lmin, '--', color=c)
+        ax[0][1].plot(ls_all, sn_Tb_lmin, '-', color=c)
 plt.show()
