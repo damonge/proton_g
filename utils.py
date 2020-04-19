@@ -145,8 +145,10 @@ def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None, use_hm=False,
            get_1h=True, get_2h=True):
     if ell_pivots is None:
         lmx = np.amax(ell)+1
-        ell_pivots = np.unique(np.geomspace(2, lmx,
-                                            int(100 * np.log10(lmx) / 3.)).astype(int)).astype(float)
+        ell_pivots = np.unique(
+            np.geomspace(2, lmx,
+                         int(100 *
+                             np.log10(lmx) / 3.)).astype(int)).astype(float)
     if b2 is None:
         b2 = b1
 

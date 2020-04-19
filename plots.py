@@ -15,10 +15,10 @@ us.append(UHECRs(39, "data/attenuation_A1_e10.0_E20.0_g2.6.dat", 1000, 1.))
 gg = Gals("2MRS", 1E5)
 
 save_cls = True
-plot_fig1 = False
-plot_fig2 = False
-plot_fig3 = False
-plot_fig4 = False
+plot_fig1 = True
+plot_fig2 = True
+plot_fig3 = True
+plot_fig4 = True
 ls_all = np.arange(2, 1000)
 
 cosmo = ccl.Cosmology(Omega_b=0.05,
@@ -66,7 +66,7 @@ if plot_fig1:
 if plot_fig2:
     fig, ax = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
     plt.subplots_adjust(wspace=0)
-    
+
     for u, c in zip(us, cols):
         cl_1h_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
                           use_hm=True, get_1h=True, get_2h=False)
@@ -90,10 +90,11 @@ if plot_fig2:
         x.set_xlim([2, 1000])
         x.set_ylim([7E-6, 5])
         x.tick_params(labelsize="large")
+    plt.savefig("figures/sl.pdf", bbox_inches='tight')
 if plot_fig3:
     fig, ax = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
     plt.subplots_adjust(wspace=0)
-    
+
     gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
     for u, g, c in zip(us, gs, cols):
         dl = 4
@@ -145,6 +146,7 @@ if plot_fig3:
         x.set_xlim([2, 1000])
         x.set_ylim([7E-6, 5])
         x.tick_params(labelsize="large")
+    plt.savefig("figures/cl_el.pdf", bbox_inches='tight')
 if plot_fig4:
     def get_sn(d, c, reverse=False):
         cc = np.transpose(c, axes=[2, 0, 1])  # [Nl, Nt, Nt]
@@ -158,7 +160,7 @@ if plot_fig4:
         return sn
 
     fig, ax = plt.subplots(2, 2, figsize=(10, 10), sharey=True, sharex=True)
-    plt.subplots_adjust(wspace=0,hspace=0)
+    plt.subplots_adjust(wspace=0, hspace=0)
     for x in ax.flatten():
         x.set_xscale('log')
         x.set_xlim([2, 1000])
@@ -242,4 +244,5 @@ if plot_fig4:
         ax[0][1].plot(ls_all, sn_A_lmin, '-.', color=c)
         ax[0][1].plot(ls_all, sn_Xb_lmin, '--', color=c)
         ax[0][1].plot(ls_all, sn_Tb_lmin, '-', color=c)
+    plt.savefig("figures/sn_cumul.pdf", bbox_inches='tight')
 plt.show()
