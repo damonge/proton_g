@@ -31,14 +31,14 @@ cosmo = ccl.Cosmology(Omega_b=0.05,
 if save_cls:
     for u in us:
         print(u.E_cut)
-        cl1huu = get_cl(ls_all, cosmo, us[1], 1., t2=us[1], b2=1.,
+        cl1huu = get_cl(ls_all, cosmo, us[1], b1=1., t2=us[1], b2=1.,
                         use_hm=True, get_1h=True, get_2h=False)
-        cl2huu = get_cl(ls_all, cosmo, us[1], 1., t2=us[1], b2=1.,
+        cl2huu = get_cl(ls_all, cosmo, us[1], b1=1., t2=us[1], b2=1.,
                         use_hm=True, get_1h=False, get_2h=True)
         cluu = cl1huu + cl2huu
-        cl1hgu = get_cl(ls_all, cosmo, gg, 1., t2=us[1], b2=1.,
+        cl1hgu = get_cl(ls_all, cosmo, gg, b1=1., t2=us[1], b2=1.,
                         use_hm=True, get_1h=True, get_2h=False)
-        cl2hgu = get_cl(ls_all, cosmo, gg, 1., t2=us[1], b2=1.,
+        cl2hgu = get_cl(ls_all, cosmo, gg, b1=1., t2=us[1], b2=1.,
                         use_hm=True, get_1h=False, get_2h=True)
         clgu = cl1hgu + cl2hgu
         np.savetxt("figures/cluu%d.txt" % (u.E_cut),
@@ -68,13 +68,13 @@ if plot_fig2:
     plt.subplots_adjust(wspace=0)
 
     for u, c in zip(us, cols):
-        cl_1h_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+        cl_1h_cc = get_cl(ls_all, cosmo, u, b1=1., t2=u, b2=1.,
                           use_hm=True, get_1h=True, get_2h=False)
-        cl_1h_gc = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+        cl_1h_gc = get_cl(ls_all, cosmo, gg, b1=1., t2=u, b2=1.,
                           use_hm=True, get_1h=True, get_2h=False)
-        cl_2h_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+        cl_2h_cc = get_cl(ls_all, cosmo, u, b1=1., t2=u, b2=1.,
                           use_hm=True, get_1h=False, get_2h=True)
-        cl_2h_gc = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+        cl_2h_gc = get_cl(ls_all, cosmo, gg, b1=1., t2=u, b2=1.,
                           use_hm=True, get_1h=False, get_2h=True)
         cl_cc = cl_1h_cc + cl_2h_cc
         cl_gc = cl_1h_gc + cl_2h_gc
@@ -99,15 +99,15 @@ if plot_fig3:
     for u, g, c in zip(us, gs, cols):
         dl = 4
         bl = u.get_beam(ls_all)
-        tl_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+        tl_cc = get_cl(ls_all, cosmo, u, b1=1., t2=u, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gc = get_cl(ls_all, cosmo, g, 1., t2=u, b2=1.,
+        tl_gc = get_cl(ls_all, cosmo, g, b1=1., t2=u, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gg = get_cl(ls_all, cosmo, g, 1., t2=g, b2=1.,
+        tl_gg = get_cl(ls_all, cosmo, g, b1=1., t2=g, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gcb = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+        tl_gcb = get_cl(ls_all, cosmo, gg, b1=1., t2=u, b2=1.,
                         use_hm=True, get_1h=True, get_2h=True)
-        tl_ggb = get_cl(ls_all, cosmo, gg, 1., t2=gg, b2=1.,
+        tl_ggb = get_cl(ls_all, cosmo, gg, b1=1., t2=gg, b2=1.,
                         use_hm=True, get_1h=True, get_2h=True)
         sl_cc = tl_cc * bl**2
         sl_gc = tl_gc * bl
@@ -170,15 +170,15 @@ if plot_fig4:
     gs = [Gals("2MRS", 1E5, t_other=u, cosmo=cosmo) for u in us]
     for u, g, c in zip(us, gs, cols):
         bl = u.get_beam(ls_all)
-        tl_cc = get_cl(ls_all, cosmo, u, 1., t2=u, b2=1.,
+        tl_cc = get_cl(ls_all, cosmo, u, b1=1., t2=u, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gc = get_cl(ls_all, cosmo, g, 1., t2=u, b2=1.,
+        tl_gc = get_cl(ls_all, cosmo, g, b1=1., t2=u, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gg = get_cl(ls_all, cosmo, g, 1., t2=g, b2=1.,
+        tl_gg = get_cl(ls_all, cosmo, g, b1=1., t2=g, b2=1.,
                        use_hm=True, get_1h=True, get_2h=True)
-        tl_gcb = get_cl(ls_all, cosmo, gg, 1., t2=u, b2=1.,
+        tl_gcb = get_cl(ls_all, cosmo, gg, b1=1., t2=u, b2=1.,
                         use_hm=True, get_1h=True, get_2h=True)
-        tl_ggb = get_cl(ls_all, cosmo, gg, 1., t2=gg, b2=1.,
+        tl_ggb = get_cl(ls_all, cosmo, gg, b1=1., t2=gg, b2=1.,
                         use_hm=True, get_1h=True, get_2h=True)
         sl_cc = tl_cc * bl**2
         sl_gc = tl_gc * bl

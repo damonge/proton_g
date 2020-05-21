@@ -141,7 +141,7 @@ class Gals(DiscreteTracer):
             return nl_val
 
 
-def get_cl(ell, cosmo, t1, b1, t2=None, b2=None, ell_pivots=None, use_hm=False,
+def get_cl(ell, cosmo, t1, t2=None, b1=1., b2=None, ell_pivots=None, use_hm=False,
            get_1h=True, get_2h=True):
     if ell_pivots is None:
         lmx = np.amax(ell)+1
